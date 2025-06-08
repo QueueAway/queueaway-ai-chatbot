@@ -1,9 +1,21 @@
 export default async function handler(req, res) {
+  // Allow CORS from any origin for dev/testing. Restrict in production.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight (OPTIONS) request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { message } = req.body;
+
   if (!message) {
     return res.status(400).json({ error: 'No message provided' });
   }
@@ -22,7 +34,8 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are a helpful assistant for QueueAway. Answer based on our FAQ. If unsure, direct them to support@queueaway.co.uk.",
+            content:
+              "You are a helpful assistant for QueueAway. Answer user queries based on QueueAway’s features, pricing, support, and functionality, referencing the FAQ. If unsure, guide users to email support@queueaway.co.uk.",
           },
           {
             role: "user",
@@ -34,10 +47,15 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
 
-    res.status(200).json({ reply: data.choices[0].message.content });
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message });
+    }
+
+    const reply = data.choices[0].message.content;
+    return res.status(200).json({ reply });
   } catch (error) {
-    res.status(500).json({ error: error.message || 'Something went wrong' });
+    return res.status(500).json({ error: 'Failed to contact OpenAI' });
   }
 }
+
