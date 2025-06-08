@@ -1,0 +1,150 @@
+<style>
+  #queueaway-launcher {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    cursor: pointer;
+    z-index: 9999;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  #queueaway-launcher img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  #queueaway-chatbox {
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    width: 340px;
+    height: 460px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: none;
+    flex-direction: column;
+    z-index: 9999;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+  #queueaway-chatbox.open {
+    display: flex;
+  }
+  #chat-header {
+    background: black;
+    color: white;
+    padding: 12px;
+    text-align: center;
+    font-weight: bold;
+  }
+  #chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 14px;
+  }
+  #chat-input {
+    display: flex;
+    border-top: 1px solid #eee;
+  }
+  #chat-input input {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    font-size: 14px;
+  }
+  #chat-input button {
+    background: black;
+    color: white;
+    border: none;
+    padding: 0 16px;
+    cursor: pointer;
+  }
+</style>
+
+<div id="queueaway-launcher" onclick="toggleQueueChat()" title="QueueAway Chat">
+  <img src="https://images.squarespace-cdn.com/content/6288b407f8595f4c702dd72e/7ae4908b-0a38-4fee-9946-c233fc00f662/My+project+%286%29.jpg" alt="Chat" />
+</div>
+
+<div id="queueaway-chatbox">
+  <div id="chat-header">QueueAway Assistant</div>
+  <div id="chat-messages"></div>
+  <div id="chat-input">
+    <input type="text" id="user-input" placeholder="Ask me anything..." onkeypress="if(event.key==='Enter')sendQueueChat()" />
+    <button onclick="sendQueueChat()">Send</button>
+  </div>
+</div>
+
+<script>
+async function sendQueueChat() {
+  const input = document.getElementById('user-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  appendMessage('You', message);
+  input.value = '';
+
+  appendBotMessage("typing...");
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+
+    const data = await res.json();
+    updateLastBotMessage(data.reply || "Sorry, I couldn't understand. Please email support@queueaway.co.uk.");
+  } catch (e) {
+    updateLastBotMessage("Error contacting support. Please try again later.");
+  }
+}
+
+function appendMessage(sender, message) {
+  const chat = document.getElementById('chat-messages');
+  chat.innerHTML += `<div><strong>${sender}:</strong> ${message}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+  localStorage.setItem('queueawayChatHistory', chat.innerHTML);
+}
+
+function appendBotMessage(message) {
+  const chat = document.getElementById('chat-messages');
+  chat.innerHTML += `<div class="bot-msg"><strong>Bot:</strong> ${message}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+  localStorage.setItem('queueawayChatHistory', chat.innerHTML);
+}
+
+function updateLastBotMessage(message) {
+  const chat = document.getElementById('chat-messages');
+  const botMessages = chat.querySelectorAll(".bot-msg");
+  if (botMessages.length) {
+    botMessages[botMessages.length - 1].innerHTML = `<strong>Bot:</strong> ${message}`;
+  }
+  chat.scrollTop = chat.scrollHeight;
+  localStorage.setItem('queueawayChatHistory', chat.innerHTML);
+}
+
+function toggleQueueChat() {
+  const box = document.getElementById('queueaway-chatbox');
+  box.classList.toggle("open");
+  if (box.classList.contains("open")) {
+    const chat = document.getElementById('chat-messages');
+    const saved = localStorage.getItem('queueawayChatHistory');
+    if (saved) chat.innerHTML = saved;
+    if (!saved) appendBotMessage(greeting());
+  }
+}
+
+function greeting() {
+  const greetings = [
+    "Hi there! How can I help you today?",
+    "Welcome to QueueAway! Ask me anything.",
+    "Hello! Need help with QueueAway?"
+  ];
+  return greetings[Math.floor(Math.random() * greetings.length)];
+}
+</script>
