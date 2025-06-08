@@ -1,8 +1,12 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const { message } = req.body;
-  if (!message) return res.status(400).json({ error: 'No message provided' });
+  if (!message) {
+    return res.status(400).json({ error: 'No message provided' });
+  }
 
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -18,12 +22,12 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "You are a helpful assistant for QueueAway. Answer user queries based on QueueAway’s features, pricing, support, and functionality, referencing the FAQ. If unsure, guide users to email support@queueaway.co.uk.",
+            content: "You are a helpful assistant for QueueAway. Answer based on our FAQ. If unsure, direct them to support@queueaway.co.uk.",
           },
           {
             role: "user",
             content: message,
-          }
+          },
         ],
         temperature: 0.7,
       }),
@@ -32,9 +36,8 @@ export default async function handler(req, res) {
     const data = await response.json();
     if (data.error) throw new Error(data.error.message);
 
-    return res.status(200).json({ reply: data.choices[0].message.content });
+    res.status(200).json({ reply: data.choices[0].message.content });
   } catch (error) {
-    return res.status(500).json({ error: error.message || "Internal Server Error" });
+    res.status(500).json({ error: error.message || 'Something went wrong' });
   }
 }
-
